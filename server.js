@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const path = require('path');
-const bcrypt = require('bcrypt');
 const cors = require('cors');
 
 const app = express();
@@ -57,8 +56,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Routes
 app.post('/api/register', async (req, res) => {
   const { studentId, password } = req.body;
-  const hashed = await bcrypt.hash(password, 10);
-  const user = new User({ studentId, password: hashed });
+  const user = new User({ studentId, password }); // plain text
   await user.save();
   res.json({ message: 'User registered' });
 });
@@ -66,9 +64,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { studentId, password } = req.body;
   const user = await User.findOne({ studentId });
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid credentials' });
   req.session.user = { id: user._id, studentId: user.studentId };
   res.json({ message: 'Login successful' });
 });
@@ -91,8 +87,7 @@ app.post('/api/complaints', async (req, res) => {
   res.json({ message: 'Complaint submitted' });
 });
 
-// Get complaints (dashboard)
-// Fetch all complaints
+// Get all complaints
 app.get("/api/complaints", async (req, res) => {
   try {
     const complaints = await Complaint.find();
@@ -114,13 +109,6 @@ app.put("/api/complaints/:id/solve", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to update complaint" });
   }
-});
-
-// Mark solved
-app.post('/api/complaints/:id/solve', async (req, res) => {
-  const { id } = req.params;
-  await Complaint.findByIdAndUpdate(id, { status: 'Solved' });
-  res.json({ message: 'Complaint marked as solved' });
 });
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
