@@ -1,0 +1,16 @@
+{
+  "name": "smart-school-gateway",
+  "version": "1.0.0",
+  "description": "Smart School Online Gateway (Node + Express + MongoDB)",
+  "main": "server.js",
+  "scripts": { "start": "nodemon server.js" },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
+    "uuid": "^9.0.1",
+    "mongoose": "^8.0.0",
+    "bcrypt": "^5.1.0",
+    "connect-mongo": "^5.0.0"
+  }
+}

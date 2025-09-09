@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <h2>Smart School Online Gateway</h2>
+    <span>Admin Dashboard</span>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1 class="dashboard-title">Complaints Dashboard</h1>
+      <p class="subtitle">View and manage all student complaints below</p>
+
+      <div class="table-container">
+        <table id="complaintsTable">
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Department</th>
+              <th>Complaint</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Complaints will be injected here dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
