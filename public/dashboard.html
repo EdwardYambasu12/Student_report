@@ -2,123 +2,232 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Complaints Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #fff;
       margin: 0;
       padding: 0;
-      color: #333;
+      background: #f3f4f6;
     }
     .container {
-      max-width: 1100px;
+      width: 90%;
       margin: 20px auto;
-      padding: 20px;
       background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
       color: #ff6600;
-      margin-bottom: 20px;
     }
-    .controls {
+    .cards {
       display: flex;
       justify-content: space-between;
+      margin-bottom: 20px;
       flex-wrap: wrap;
-      margin-bottom: 15px;
     }
-    .controls select,
-    .controls input {
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 14px;
+    .card {
+      flex: 1;
+      margin: 10px;
+      padding: 20px;
+      border-radius: 12px;
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+    }
+    .total { background-color: #ff6600; }
+    .solved { background-color: #28a745; }
+    .pending { background-color: #d9534f; }
+    .card h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .card p {
+      margin: 5px 0 0 0;
+      font-size: 16px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin: 15px 0;
     }
-    table th, table td {
-      border: 1px solid #ddd;
+    th, td {
       padding: 10px;
-      text-align: left;
+      border: 1px solid #ddd;
+      text-align: center;
     }
-    table th {
+    th {
       background: #ff6600;
-      color: white;
-    }
-    .status-pending {
-      color: #d9534f;
-      font-weight: bold;
-    }
-    .status-solved {
-      color: #28a745;
-      font-weight: bold;
+      color: #fff;
     }
     button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
       background: #ff6600;
       color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 5px;
       cursor: pointer;
-      font-size: 13px;
     }
     button:hover {
       background: #e65c00;
     }
-    .read-more {
-      margin-left: 10px;
-      font-size: 12px;
-      background: #fff;
+    .section-title {
+      margin-top: 30px;
       color: #ff6600;
-      border: 1px solid #ff6600;
-    }
-    .read-more:hover {
-      background: #ff6600;
-      color: #fff;
+      font-size: 20px;
+      border-bottom: 2px solid #ff6600;
+      display: inline-block;
+      padding-bottom: 5px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Complaints Dashboard</h1>
+    <h1>Admin Dashboard</h1>
 
-    <div class="controls">
-      <div>
-        <label for="statusFilter">Filter: </label>
-        <select id="statusFilter">
-          <option value="All">All</option>
-          <option value="Pending">Pending</option>
-          <option value="Solved">Solved</option>
-        </select>
+    <!-- Summary Cards -->
+    <div class="cards">
+      <div class="card total">
+        <h2 id="totalTasks">0</h2>
+        <p>Total Tasks</p>
       </div>
-      <div>
-        <input type="text" id="searchBox" placeholder="Search by student ID or complaint...">
+      <div class="card solved">
+        <h2 id="solvedTasks">0</h2>
+        <p>Solved</p>
+      </div>
+      <div class="card pending">
+        <h2 id="pendingTasks">0</h2>
+        <p>Pending</p>
       </div>
     </div>
 
+    <!-- Filters -->
+    <div class="filters">
+      <button onclick="filterComplaints('all')">All</button>
+      <button onclick="filterComplaints('Pending')">Pending</button>
+      <button onclick="filterComplaints('Solved')">Solved</button>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search complaints..." onkeyup="searchComplaints()">
+    </div>
+
+    <!-- Complaints Table -->
     <table id="complaintsTable">
       <thead>
         <tr>
           <th>Student ID</th>
           <th>Department</th>
-          <th>Complaint</th>
+          <th>Message</th>
           <th>Status</th>
+          <th>Date</th>
           <th>Action</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Data from JS will load here -->
-      </tbody>
+      <tbody id="complaintsList"></tbody>
+    </table>
+
+    <!-- New Users Section -->
+    <h2 class="section-title">New Users</h2>
+    <table id="usersTable">
+      <thead>
+        <tr>
+          <th>Student ID</th>
+          <th>Registered Date</th>
+        </tr>
+      </thead>
+      <tbody id="usersList"></tbody>
     </table>
   </div>
 
-  <script src="dashboard.js"></script>
+  <script>
+    let allComplaints = [];
+
+    async function loadComplaints() {
+      try {
+        const res = await fetch('/api/complaints');
+        allComplaints = await res.json();
+        renderSummaryCards();
+        renderComplaints(allComplaints);
+      } catch (err) {
+        console.error("Error loading complaints:", err);
+      }
+    }
+
+    function renderSummaryCards() {
+      const total = allComplaints.length;
+      const solved = allComplaints.filter(c => c.status === "Solved").length;
+      const pending = allComplaints.filter(c => c.status === "Pending").length;
+
+      document.getElementById("totalTasks").textContent = total;
+      document.getElementById("solvedTasks").textContent = solved;
+      document.getElementById("pendingTasks").textContent = pending;
+    }
+
+    function renderComplaints(complaints) {
+      const list = document.getElementById("complaintsList");
+      list.innerHTML = "";
+      complaints.reverse().forEach(c => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${c.studentId}</td>
+          <td>${c.department}</td>
+          <td>${c.message.substring(0, 30)}... <button onclick="alert('${c.message}')">Read More</button></td>
+          <td>${c.status}</td>
+          <td>${new Date(c.createdAt).toLocaleString()}</td>
+          <td>${c.status === "Pending" ? `<button onclick="markSolved('${c._id}')">Mark Solved</button>` : "—"}</td>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function filterComplaints(status) {
+      if (status === 'all') renderComplaints(allComplaints);
+      else renderComplaints(allComplaints.filter(c => c.status === status));
+    }
+
+    function searchComplaints() {
+      const term = document.getElementById("searchInput").value.toLowerCase();
+      const filtered = allComplaints.filter(c =>
+        c.studentId.toLowerCase().includes(term) ||
+        c.department.toLowerCase().includes(term) ||
+        c.message.toLowerCase().includes(term)
+      );
+      renderComplaints(filtered);
+    }
+
+    async function markSolved(id) {
+      await fetch(`/api/complaints/${id}/solve`, { method: "PUT" });
+      loadComplaints();
+    }
+
+    // Load users
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/users');
+        const users = await res.json();
+        const list = document.getElementById("usersList");
+        list.innerHTML = "";
+        users.reverse().forEach(u => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${u.studentId}</td>
+            <td>${new Date(u.createdAt).toLocaleString()}</td>
+          `;
+          list.appendChild(row);
+        });
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    }
+
+    // Load data on page load
+    loadComplaints();
+    loadUsers();
+  </script>
 </body>
 </html>
