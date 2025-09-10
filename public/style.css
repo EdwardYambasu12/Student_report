@@ -8,17 +8,74 @@
 /* Body */
 body {
   font-family: Arial, sans-serif;
-  background: #fff;
-  color: #333;
-  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  /* ✅ Background from the internet */
+  background: url("https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1740&q=80") no-repeat center center fixed;
+  background-size: cover;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
 /* Container */
 .container {
   max-width: 80%;
   margin: 60px auto;
   padding: 0 15px;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  margin-bottom: 15px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  background: #f3f3f3;
+  font-weight: bold;
+  transition: 0.3s;
+}
+.tab-btn.active {
+  background: #ff6600;
+  color: #fff;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#searchBox, #statusFilter {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Read More */
+.read-more {
+  color: #ff6600;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
 
 /* Title + Subtitle */
 .title {

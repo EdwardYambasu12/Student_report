@@ -111,4 +111,15 @@ app.put("/api/complaints/:id/solve", async (req, res) => {
   }
 });
 
+// Get all users (for admin dashboard)
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await User.find({}, "studentId password"); // Only return ID & password
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

@@ -2,38 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard</title>
+  <title>Complaints Dashboard</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #ff6600;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    .controls select,
+    .controls input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    table th {
+      background: #ff6600;
+      color: white;
+    }
+    .status-pending {
+      color: #d9534f;
+      font-weight: bold;
+    }
+    .status-solved {
+      color: #28a745;
+      font-weight: bold;
+    }
+    button {
+      background: #ff6600;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover {
+      background: #e65c00;
+    }
+    .read-more {
+      margin-left: 10px;
+      font-size: 12px;
+      background: #fff;
+      color: #ff6600;
+      border: 1px solid #ff6600;
+    }
+    .read-more:hover {
+      background: #ff6600;
+      color: #fff;
+    }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
-    <h2>Smart School Online Gateway</h2>
-    <span>Admin Dashboard</span>
-  </nav>
-
   <div class="container">
-    <div class="card">
-      <h1 class="dashboard-title">Complaints Dashboard</h1>
-      <p class="subtitle">View and manage all student complaints below</p>
+    <h1>Complaints Dashboard</h1>
 
-      <div class="table-container">
-        <table id="complaintsTable">
-          <thead>
-            <tr>
-              <th>Student ID</th>
-              <th>Department</th>
-              <th>Complaint</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Complaints will be injected here dynamically -->
-          </tbody>
-        </table>
+    <div class="controls">
+      <div>
+        <label for="statusFilter">Filter: </label>
+        <select id="statusFilter">
+          <option value="All">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Solved">Solved</option>
+        </select>
+      </div>
+      <div>
+        <input type="text" id="searchBox" placeholder="Search by student ID or complaint...">
       </div>
     </div>
+
+    <table id="complaintsTable">
+      <thead>
+        <tr>
+          <th>Student ID</th>
+          <th>Department</th>
+          <th>Complaint</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data from JS will load here -->
+      </tbody>
+    </table>
   </div>
 
   <script src="dashboard.js"></script>
