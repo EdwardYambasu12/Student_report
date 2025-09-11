@@ -1,26 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Student Complaint</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+    }
+    .container {
+      width: 90%;
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #ff6600;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    select, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #ff6600;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .previous {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      background: #f9f9f9;
+      border-left: 4px solid #ff6600;
+    }
+    .status-pending { color: #d9534f; font-weight: bold; }
+    .status-solved { color: #28a745; font-weight: bold; }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Submit a Complaint</h1>
+    <h1>Submit Complaint</h1>
+
+    <!-- Complaint Form -->
     <form id="complaintForm">
-      <label for="department">Department</label>
-      <select id="department">
-        <option value="Administration">Administration</option>
+      <label for="department">Select Department:</label>
+      <select id="department" required>
+        <option value="">--Select Department--</option>
         <option value="Academics">Academics</option>
         <option value="Finance">Finance</option>
         <option value="Library">Library</option>
+        <option value="Hostel">Hostel</option>
+        <option value="Other">Other</option>
       </select>
-      <label for="message">Message</label>
-      <textarea id="message" required></textarea>
+
+        <div class="student-header">
+    <h2>Welcome, <span id="studentName"></span></h2>
+    <p>Your Student ID: <strong id="studentId"></strong></p>
+  </div>
+
+
+      <label for="message">Complaint:</label>
+      <textarea id="message" rows="4" placeholder="Write your complaint..." required></textarea>
+
       <button type="submit">Submit</button>
     </form>
-    
+
+    <!-- Previous Complaint Section -->
+    <div id="previousComplaint" class="previous" style="display:none;">
+      <h3>Your Last Complaint</h3>
+      <p><strong>Department:</strong> <span id="prevDept"></span></p>
+      <p><strong>Message:</strong> <span id="prevMsg"></span></p>
+      <p><strong>Status:</strong> <span id="prevStatus"></span></p>
+    </div>
   </div>
+
+  <script>
+    let lastComplaint = null;
+
+
+
+     const idm = localStorage.getItem("studentId");
+
+     var got
+
+    // Load student's last complaint
+    async function loadLastComplaint() {
+      try {
+        const res = await fetch('/api/complaints');
+        const complaints = await res.json();
+
+        got = complaints.filter(cmp => cmp.studentId === idm);
+
+        console.log(got, "made by this student");
+
+         document.getElementById("studentId").textContent = idm;
+         document.getElementById("studentName").textContent = localStorage.getItem("studentName");
+        // Assuming backend filters by session user, else filter manually
+        if (complaints.length > 0) {
+          lastComplaint = got[0]; // most recent
+          document.getElementById("previousComplaint").style.display = "block";
+          document.getElementById("prevDept").textContent = lastComplaint.department;
+          document.getElementById("prevMsg").textContent = lastComplaint.message;
+          document.getElementById("prevStatus").textContent = lastComplaint.status;
+
+          if (lastComplaint.status === "Pending") {
+            document.getElementById("prevStatus").className = "status-pending";
+            document.querySelector("#complaintForm button").disabled = true;
+          } else {
+            document.getElementById("prevStatus").className = "status-solved";
+            document.querySelector("#complaintForm button").disabled = false;
+          }
+        }
+      } catch (err) {
+        console.error("Error loading complaints:", err);
+      }
+    }
+
+    // Submit new complaint
+    document.getElementById("complaintForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const department = document.getElementById("department").value;
+      const message = document.getElementById("message").value;
+
+      const res = await fetch('/api/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department, message })
+      });
+
+      if (res.ok) {
+        alert("Complaint submitted successfully!");
+        loadLastComplaint();
+      } else {
+        alert("Error submitting complaint.");
+      }
+    });
+
+    loadLastComplaint();
+  </script>
   <script src="student.js"></script>
 </body>
 </html>

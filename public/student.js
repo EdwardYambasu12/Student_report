@@ -15,4 +15,26 @@ document.getElementById('complaintForm').addEventListener('submit', async (e) =>
   } else {
     alert('Error submitting complaint');
   }
+
+});
+document.addEventListener("DOMContentLoaded", () => {
+  const studentId = localStorage.getItem("studentId");
+  console.log("Retrieved studentId from localStorage:", studentId);
+
+  if (!studentId) {
+    // If no ID found, redirect back to login
+    window.location.href = "index.html";
+    return;
+  }
+
+  // Show student ID on page
+  document.getElementById("studentId").textContent = studentId;
+
+  // 🔍 Now you can use studentId to fetch previous complaints
+  fetch(`/api/complaints?studentId=${studentId}`)
+    .then(res => res.json())
+    .then(data => {
+      console.log("Student complaints:", data);
+      // render last complaint if needed
+    });
 });
