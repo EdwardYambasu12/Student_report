@@ -26,19 +26,25 @@ db.once('open', () => {
 });
 
 // Schemas
+// User Schema
 const userSchema = new mongoose.Schema({
-  studentId: String,
+  username: String,
   password: String
 });
+
+// Complaint Schema
 const complaintSchema = new mongoose.Schema({
-  studentId: String,
-  department: String,
+  username: String,            // instead of studentId
+  problemDepartment: String,   // area of problem
+  college: String,             // student’s college
+  studentDepartment: String,   // student’s department
   message: String,
   status: { type: String, default: 'Pending' },
   createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model('User', userSchema);
+
+const User= mongoose.model('User_', userSchema);
 const Complaint = mongoose.model('Complaint', complaintSchema);
 
 // Sessions
@@ -54,20 +60,55 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
+// register route
 app.post('/api/register', async (req, res) => {
-  const { studentId, password } = req.body;
-  const user = new User({ studentId, password }); // plain text
-  await user.save();
-  res.json({ message: 'User registered' });
+  const { username, password } = req.body;
+console.log('Register attempt:', username);
+  try {
+    // check if username already exists
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+         console.log('Username already exists:', username, existingUser);
+      return res.status(400).json({ message: 'Username already exists' });
+   
+    }
+
+    // create new user with plain text password
+    const user = new User({ username, password });
+    await user.save();
+
+    res.json({ message: 'User registered successfully' });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ message: 'Server error, please try again' });
+  }
 });
 
+// backend login route
 app.post('/api/login', async (req, res) => {
-  const { studentId, password } = req.body;
-  const user = await User.findOne({ studentId });
-  if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid credentials' });
-  req.session.user = { id: user._id, studentId: user.studentId };
-  res.json({ message: 'Login successful' });
+  const { username, password } = req.body;
+
+  try {
+    // find by username instead of studentId
+    const user = await User.findOne({ username });
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // store session info
+    req.session.user = { id: user._id, username: user.username };
+
+    res.json({ 
+      message: 'Login successful', 
+      user: { id: user._id, username: user.username } 
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Server error, please try again' });
+  }
 });
+
 
 app.post('/api/logout', (req, res) => {
   req.session.destroy();
@@ -77,12 +118,15 @@ app.post('/api/logout', (req, res) => {
 // Submit complaint
 app.post('/api/complaints', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
-  const { department, message } = req.body;
+  const { college, message, username } = req.body;
+
+
   const complaint = new Complaint({
-    studentId: req.session.user.studentId,
-    department,
+    username,
+    college,
     message
   });
+  console.log('New complaint:', complaint);
   await complaint.save();
   res.json({ message: 'Complaint submitted' });
 });

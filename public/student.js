@@ -1,3 +1,65 @@
+// Hardcoded college → departments mapping
+const collegeDepartments = {
+  "College of Agriculture and Food Sciences": [
+    "Department of General Agriculture",
+    "Department of Agribusiness",
+    "Department of Forestry",
+    "Department of Environmental Science"
+  ],
+  "College of Engineering and Technology": [
+    "Department of Civil Engineering",
+    "Department of Electrical Engineering",
+    "Department of Mechanical Engineering",
+    "Department of Architecture"
+  ],
+  "College of Health Sciences": [
+    "Department of Nursing",
+    "Department of Public Health",
+    "Department of Midwifery",
+    "Department of Pharmacy"
+  ],
+  "College of Education": [
+    "Department of Primary Education",
+    "Department of Secondary Education",
+    "Department of Special Education"
+  ],
+  "College of Arts and Sciences": [
+    "Department of English",
+    "Department of Social Sciences",
+    "Department of Biological Sciences",
+    "Department of Chemistry",
+    "Department of Physics",
+    "Department of Mathematics"
+  ],
+  "College of Management and Administration": [
+    "Department of Accounting",
+    "Department of Management",
+    "Department of Economics",
+    "Department of Public Administration"
+  ]
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  const collegeSelect = document.getElementById("college");
+  const deptSelect = document.getElementById("studentDepartment");
+
+  // Update department dropdown when college is selected
+  collegeSelect.addEventListener("change", () => {
+    const selectedCollege = collegeSelect.value;
+    deptSelect.innerHTML = '<option value="">-- Select Department --</option>';
+
+    if (collegeDepartments[selectedCollege]) {
+      collegeDepartments[selectedCollege].forEach(dep => {
+        const option = document.createElement("option");
+        option.value = dep;
+        option.textContent = dep;
+        deptSelect.appendChild(option);
+      });
+    }
+  });
+});
+
+
 document.getElementById('complaintForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const department = document.getElementById('department').value;

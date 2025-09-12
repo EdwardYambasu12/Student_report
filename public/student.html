@@ -54,29 +54,37 @@
     }
     .status-pending { color: #d9534f; font-weight: bold; }
     .status-solved { color: #28a745; font-weight: bold; }
+    .student-header {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #fff3e0;
+      border-radius: 8px;
+      text-align: center;
+      color: #ff6600;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="student-header">
+      <h2>Welcome, <span id="studentName"></span></h2>
+    
+    </div>
+
     <h1>Submit Complaint</h1>
 
-    <!-- Complaint Form -->
     <form id="complaintForm">
-      <label for="department">Select Department:</label>
-      <select id="department" required>
-        <option value="">--Select Department--</option>
-        <option value="Academics">Academics</option>
-        <option value="Finance">Finance</option>
-        <option value="Library">Library</option>
-        <option value="Hostel">Hostel</option>
-        <option value="Other">Other</option>
+      <!-- College Dropdown -->
+      <label for="college">Select Your College:</label>
+      <select id="college" required>
+        <option value="">-- Select College --</option>
+        <option value="College of Agriculture and Food Sciences">College of Agriculture and Food Sciences</option>
+        <option value="College of Engineering and Technology">College of Engineering and Technology</option>
+        <option value="College of Health Sciences">College of Health Sciences</option>
+        <option value="College of Education">College of Education</option>
+        <option value="College of Arts and Sciences">College of Arts and Sciences</option>
+        <option value="College of Management and Administration">College of Management and Administration</option>
       </select>
-
-        <div class="student-header">
-    <h2>Welcome, <span id="studentName"></span></h2>
-    <p>Your Student ID: <strong id="studentId"></strong></p>
-  </div>
-
 
       <label for="message">Complaint:</label>
       <textarea id="message" rows="4" placeholder="Write your complaint..." required></textarea>
@@ -87,47 +95,42 @@
     <!-- Previous Complaint Section -->
     <div id="previousComplaint" class="previous" style="display:none;">
       <h3>Your Last Complaint</h3>
-      <p><strong>Department:</strong> <span id="prevDept"></span></p>
+      <p><strong>College:</strong> <span id="prevCollege"></span></p>
       <p><strong>Message:</strong> <span id="prevMsg"></span></p>
       <p><strong>Status:</strong> <span id="prevStatus"></span></p>
     </div>
   </div>
 
   <script>
-    let lastComplaint = null;
+    // Retrieve student info from localStorage
+    const username = localStorage.getItem("username");
+    const studentId = username
 
+    if (!username || !studentId) {
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("studentName").textContent = username;
+    
+    }
 
-
-     const idm = localStorage.getItem("studentId");
-
-     var got
-
-    // Load student's last complaint
+    // Load last complaint
     async function loadLastComplaint() {
       try {
         const res = await fetch('/api/complaints');
         const complaints = await res.json();
 
-        got = complaints.filter(cmp => cmp.studentId === idm);
-
-        console.log(got, "made by this student");
-
-         document.getElementById("studentId").textContent = idm;
-         document.getElementById("studentName").textContent = localStorage.getItem("studentName");
-        // Assuming backend filters by session user, else filter manually
-        if (complaints.length > 0) {
-          lastComplaint = got[0]; // most recent
+        const userComplaints = complaints.filter(c => c.username === username);
+        if (userComplaints.length > 0) {
+          const last = userComplaints[userComplaints.length - 1];
           document.getElementById("previousComplaint").style.display = "block";
-          document.getElementById("prevDept").textContent = lastComplaint.department;
-          document.getElementById("prevMsg").textContent = lastComplaint.message;
-          document.getElementById("prevStatus").textContent = lastComplaint.status;
+          document.getElementById("prevCollege").textContent = last.college || "N/A";
+          document.getElementById("prevMsg").textContent = last.message;
+          document.getElementById("prevStatus").textContent = last.status;
+          document.getElementById("prevStatus").className = last.status === "Pending" ? "status-pending" : "status-solved";
 
-          if (lastComplaint.status === "Pending") {
-            document.getElementById("prevStatus").className = "status-pending";
+          // Disable form if last complaint pending
+          if (last.status === "Pending") {
             document.querySelector("#complaintForm button").disabled = true;
-          } else {
-            document.getElementById("prevStatus").className = "status-solved";
-            document.querySelector("#complaintForm button").disabled = false;
           }
         }
       } catch (err) {
@@ -135,28 +138,28 @@
       }
     }
 
-    // Submit new complaint
+    loadLastComplaint();
+
+    // Submit complaint
     document.getElementById("complaintForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const department = document.getElementById("department").value;
+      const college = document.getElementById("college").value;
       const message = document.getElementById("message").value;
 
       const res = await fetch('/api/complaints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ department, message })
+        body: JSON.stringify({ college, message, username })
       });
 
       if (res.ok) {
         alert("Complaint submitted successfully!");
+        document.getElementById("message").value = "";
         loadLastComplaint();
       } else {
-        alert("Error submitting complaint.");
+        alert("Error submitting complaint");
       }
     });
-
-    loadLastComplaint();
   </script>
-  <script src="student.js"></script>
 </body>
 </html>

@@ -32,7 +32,7 @@ function renderComplaints(filter) {
   // Apply search
   if (search) {
     complaints = complaints.filter(c =>
-      c.studentId.toLowerCase().includes(search) ||
+      c.username.toLowerCase().includes(search) ||
       c.message.toLowerCase().includes(search)  // ✅ FIXED
     );
   }
@@ -47,8 +47,8 @@ function renderComplaints(filter) {
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${c.studentId}</td>
-        <td>${c.department}</td>
+        <td>${c.username}</td>
+        <td>${c.college}</td>
         <td>
           <span id="complaint-${c._id}">${shortText}</span>
           ${c.message.length > 30

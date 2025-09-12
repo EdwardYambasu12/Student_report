@@ -1,12 +1,12 @@
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const studentId = document.getElementById('studentId').value;
+  const username = document.getElementById('studentId').value;
   const password = document.getElementById('password').value;
 
   const res = await fetch('/api/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId, password })
+    body: JSON.stringify({ username, password })
   });
 
   if (res.ok) {
@@ -14,6 +14,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     window.location.href = 'index.html';
   } else {
     const data = await res.json();
+    console.log(data);
     alert(data.error || 'Error during registration');
   }
 });

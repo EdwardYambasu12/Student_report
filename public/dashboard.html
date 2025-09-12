@@ -174,8 +174,8 @@
       complaints.reverse().forEach(c => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${c.studentId}</td>
-          <td>${c.department}</td>
+          <td>${c.username}</td>
+          <td>${c.college}</td>
           <td>${c.message.substring(0, 30)}... <button onclick="alert('${c.message}')">Read More</button></td>
           <td>${c.status}</td>
           <td>${new Date(c.createdAt).toLocaleString()}</td>
