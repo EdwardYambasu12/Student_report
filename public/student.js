@@ -40,6 +40,14 @@ const collegeDepartments = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Logout button functionality
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "index.html";
+    });
+  }
   const collegeSelect = document.getElementById("college");
   const deptSelect = document.getElementById("studentDepartment");
 

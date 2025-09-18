@@ -1,10 +1,9 @@
-document.getElementById('registerForm').addEventListener('submit', async (e) => {
+document.getElementById('adminRegisterForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const firstName = document.getElementById('firstName').value.trim();
   const middleName = document.getElementById('middleName').value.trim();
   const lastName = document.getElementById('lastName').value.trim();
   const username = document.getElementById('username').value.trim();
-  const department = document.getElementById('department').value.trim();
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -13,18 +12,17 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     return;
   }
 
-  const res = await fetch('/api/register', {
+  const res = await fetch('/api/admin/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ firstName, middleName, lastName, username, department, password })
+    body: JSON.stringify({ firstName, middleName, lastName, username, password })
   });
 
   if (res.ok) {
-    alert('Registration successful! Please login.');
-    window.location.href = 'index.html';
+    alert('Admin registration successful! Please login.');
+    window.location.href = 'admin-login.html';
   } else {
     const data = await res.json();
-    console.log(data);
     alert(data.error || 'Error during registration');
   }
 });

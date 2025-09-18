@@ -45,12 +45,18 @@
       background: #ccc;
       cursor: not-allowed;
     }
-    .previous {
+    .complaints-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
       margin-top: 20px;
+    }
+    .complaint-card {
       padding: 15px;
       border-radius: 8px;
       background: #f9f9f9;
       border-left: 4px solid #ff6600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
     .status-pending { color: #d9534f; font-weight: bold; }
     .status-solved { color: #28a745; font-weight: bold; }
@@ -68,8 +74,16 @@
   <div class="container">
     <div class="student-header">
       <h2>Welcome, <span id="studentName"></span></h2>
-    
+      <button id="logoutBtn" style="float:right; background:#d9534f; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Logout</button>
     </div>
+
+    <h2>Your Complaints & Tasks</h2>
+    <div style="margin-bottom:16px; text-align:center;">
+      <button class="filterBtn" data-filter="all" style="margin-right:8px;">All</button>
+      <button class="filterBtn" data-filter="pending" style="margin-right:8px;">Pending</button>
+      <button class="filterBtn" data-filter="solved">Solved</button>
+    </div>
+    <div id="complaintsList" class="complaints-grid"></div>
 
     <h1>Submit Complaint</h1>
 
@@ -113,32 +127,76 @@
     
     }
 
-    // Load last complaint
-    async function loadLastComplaint() {
+
+    // Load all complaints/tasks for the user
+    let allUserComplaints = [];
+    let currentFilter = "all";
+
+    async function loadComplaints() {
       try {
         const res = await fetch('/api/complaints');
         const complaints = await res.json();
-
-        const userComplaints = complaints.filter(c => c.username === username);
-        if (userComplaints.length > 0) {
-          const last = userComplaints[userComplaints.length - 1];
-          document.getElementById("previousComplaint").style.display = "block";
-          document.getElementById("prevCollege").textContent = last.college || "N/A";
-          document.getElementById("prevMsg").textContent = last.message;
-          document.getElementById("prevStatus").textContent = last.status;
-          document.getElementById("prevStatus").className = last.status === "Pending" ? "status-pending" : "status-solved";
-
-          // Disable form if last complaint pending
-          if (last.status === "Pending") {
-            document.querySelector("#complaintForm button").disabled = true;
-          }
-        }
+        allUserComplaints = complaints.filter(c => c.username === username);
+        renderComplaints();
       } catch (err) {
         console.error("Error loading complaints:", err);
       }
     }
 
-    loadLastComplaint();
+    function renderComplaints() {
+      const listDiv = document.getElementById("complaintsList");
+      listDiv.innerHTML = "";
+      let filtered = allUserComplaints;
+      if (currentFilter === "pending") {
+        filtered = filtered.filter(c => c.status === "Pending");
+      } else if (currentFilter === "solved") {
+        filtered = filtered.filter(c => c.status === "Solved");
+      }
+      if (filtered.length === 0) {
+        listDiv.innerHTML = "<p>No complaints or tasks found.</p>";
+        return;
+      }
+      filtered.forEach((c, idx) => {
+        const item = document.createElement("div");
+        item.className = "complaint-card";
+        // Format timestamps
+        const sentTime = c.createdAt ? new Date(c.createdAt).toLocaleString() : "N/A";
+        const solvedTime = c.solvedAt ? new Date(c.solvedAt).toLocaleString() : (c.status === "Solved" ? "(time not recorded)" : "-");
+        item.innerHTML = `
+          <strong>Department:</strong> ${c.department || "N/A"}<br>
+          <strong>College:</strong> ${c.college || "N/A"}<br>
+          <strong>Message:</strong> ${c.message}<br>
+          <strong>Status:</strong> <span class="${c.status === "Pending" ? "status-pending" : "status-solved"}">${c.status}</span><br>
+          <strong>Sent:</strong> ${sentTime}<br>
+          <strong>Solved:</strong> ${c.status === "Solved" ? solvedTime : "-"}
+          ${c.status === "Pending" ? `<br><button class="solveBtn" data-id="${c._id}">Mark as Solved</button>` : ""}
+        `;
+        listDiv.appendChild(item);
+      });
+
+      // Add event listeners for solve buttons
+      document.querySelectorAll(".solveBtn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const id = btn.getAttribute("data-id");
+          const res = await fetch(`/api/complaints/${id}/solve`, { method: "PUT" });
+          if (res.ok) {
+            alert("Marked as solved!");
+            loadComplaints();
+          } else {
+            alert("Error updating status");
+          }
+        });
+      });
+    }
+
+    document.querySelectorAll(".filterBtn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        currentFilter = btn.getAttribute("data-filter");
+        renderComplaints();
+      });
+    });
+
+    loadComplaints();
 
     // Submit complaint
     document.getElementById("complaintForm").addEventListener("submit", async (e) => {
