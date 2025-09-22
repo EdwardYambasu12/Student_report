@@ -43,7 +43,10 @@ const complaintSchema = new mongoose.Schema({
   studentDepartment: String,   // student’s department
   message: String,
   status: { type: String, default: 'Pending' },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  department: String, // assigned department
+  rating: Number, // student's rating (1-5)
+  recommendation: String // student's recommendation
 });
 
 // Admin Schema
@@ -130,6 +133,28 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ================== Complaints ==================
+// Student: Rate and recommend a solved complaint
+app.post('/api/complaints/:id/rate', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { rating, recommendation } = req.body;
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
+    if (complaint.username !== req.session.user.username) {
+      return res.status(403).json({ error: 'You can only rate your own complaints' });
+    }
+    if (complaint.status !== 'Solved') {
+      return res.status(400).json({ error: 'You can only rate solved complaints' });
+    }
+    complaint.rating = rating;
+    complaint.recommendation = recommendation;
+    await complaint.save();
+    res.json({ message: 'Rating submitted', complaint });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to submit rating' });
+  }
+});
 // Admin: Assign complaint to department
 app.put("/api/complaints/:id/assign", requireAdmin, async (req, res) => {
   try {
