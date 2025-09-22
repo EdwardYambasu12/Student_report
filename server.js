@@ -49,7 +49,8 @@ const complaintSchema = new mongoose.Schema({
 // Admin Schema
 const adminSchema = new mongoose.Schema({
   username: String,
-  password: String
+  password: String,
+  department: String
 });
 
 const Admin = mongoose.model("Admin", adminSchema);
@@ -117,10 +118,10 @@ app.post('/api/login', async (req, res) => {
       user: { id: user._id, username: user.username }
     });
   } catch (err) {
-    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error, please try again' });
   }
 });
+
 
 // Student logout
 app.post('/api/logout', (req, res) => {
@@ -129,15 +130,61 @@ app.post('/api/logout', (req, res) => {
 });
 
 // ================== Complaints ==================
+// Admin: Assign complaint to department
+app.put("/api/complaints/:id/assign", requireAdmin, async (req, res) => {
+  try {
+    const { department } = req.body;
+    const complaint = await Complaint.findByIdAndUpdate(
+      req.params.id,
+      { department },
+      { new: true }
+    );
+    res.json(complaint);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to assign department" });
+  }
+});
+
+// Admin: Get new complaints assigned to their department (for notifications)
+app.get('/api/department-tasks/notifications', requireAdmin, async (req, res) => {
+  try {
+    const adminUsername = req.session.admin.username;
+    const admin = await Admin.findOne({ username: adminUsername });
+    if (!admin || !admin.department) {
+      return res.status(400).json({ error: 'Admin department not found' });
+    }
+    // Optionally, filter by createdAt > lastChecked (frontend can send lastChecked)
+    const { lastChecked } = req.query;
+    let query = { department: admin.department };
+    if (lastChecked) {
+      query.createdAt = { $gt: new Date(lastChecked) };
+    }
+    const newTasks = await Complaint.find(query).sort({ createdAt: -1 });
+    res.json(newTasks);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch department notifications' });
+  }
+});
+// Student: Get their own complaints
+app.get('/api/my-complaints', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const complaints = await Complaint.find({ username: req.session.user.username }).sort({ createdAt: -1 });
+    res.json(complaints);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch complaints' });
+  }
+});
 app.post('/api/complaints', async (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { college, message, username } = req.body;
+  const { college, department, message, username } = req.body;
 
-  const complaint = new Complaint({
-    username,
-    college,
-    message
+  const complaint = new Complaint({ 
+    username, 
+    college, 
+    department, 
+    message 
   });
   console.log('New complaint:', complaint);
   await complaint.save();
@@ -157,11 +204,20 @@ app.get("/api/complaints", requireAdmin, async (req, res) => {
 // Mark complaint as solved
 app.put("/api/complaints/:id/solve", requireAdmin, async (req, res) => {
   try {
-    const complaint = await Complaint.findByIdAndUpdate(
-      req.params.id,
-      { status: "Solved" },
-      { new: true }
-    );
+    const adminUsername = req.session.admin.username;
+    const admin = await Admin.findOne({ username: adminUsername });
+    if (!admin || !admin.department) {
+      return res.status(403).json({ error: "Admin department not found" });
+    }
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ error: "Complaint not found" });
+    }
+    if (complaint.department !== admin.department) {
+      return res.status(403).json({ error: "You can only solve complaints in your department" });
+    }
+    complaint.status = "Solved";
+    await complaint.save();
     res.json(complaint);
   } catch (err) {
     res.status(500).json({ error: "Failed to update complaint" });
@@ -171,6 +227,18 @@ app.put("/api/complaints/:id/solve", requireAdmin, async (req, res) => {
 // Delete complaint
 app.delete("/api/complaints/:id", requireAdmin, async (req, res) => {
   try {
+    const adminUsername = req.session.admin.username;
+    const admin = await Admin.findOne({ username: adminUsername });
+    if (!admin || !admin.department) {
+      return res.status(403).json({ error: "Admin department not found" });
+    }
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ error: "Complaint not found" });
+    }
+    if (complaint.department !== admin.department) {
+      return res.status(403).json({ error: "You can only delete complaints in your department" });
+    }
     await Complaint.findByIdAndDelete(req.params.id);
     res.json({ message: "Complaint deleted" });
   } catch (err) {
@@ -192,12 +260,12 @@ app.get("/api/users", requireAdmin, async (req, res) => {
 // ================== Admin ==================
 // Admin register (only an admin can add another admin)
 app.post("/api/admin/register", requireAdmin, async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, department, firstName, middleName, lastName } = req.body;
   try {
     const existing = await Admin.findOne({ username });
     if (existing) return res.status(400).json({ error: "Admin already exists" });
 
-    const admin = new Admin({ username, password });
+    const admin = new Admin({ username, password, department, firstName, middleName, lastName });
     await admin.save();
     res.json({ message: "New admin added" });
   } catch (err) {

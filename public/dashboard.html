@@ -114,8 +114,10 @@
   <!-- Dashboard -->
   <div id="dashboard" class="container hidden">
     <div class="topbar">
-      <h1>Admin Dashboard</h1>
-      <button onclick="adminLogout()">Logout</button>
+  <h1>Admin Dashboard</h1>
+  <span id="adminDeptDisplay" style="font-size:16px;color:#333;margin-left:20px;"></span>
+  <button onclick="adminLogout()">Logout</button>
+    <span id="notificationBadge" style="margin-left:20px; color:#d9534f; font-weight:bold;"></span>
     </div>
 
     <!-- Summary Cards -->
@@ -147,11 +149,16 @@
     </div>
 
     <!-- Complaints Table -->
+      <div style="margin-bottom:10px;">
+        <button onclick="exportComplaints()">Export to CSV</button>
+        <button onclick="printComplaints()">Print</button>
+      </div>
     <table id="complaintsTable">
       <thead>
         <tr>
           <th>Student</th>
           <th>College</th>
+          <th>Department</th>
           <th>Message</th>
           <th>Status</th>
           <th>Date</th>
@@ -178,6 +185,34 @@
     <form id="addAdminForm">
       <input type="text" id="newAdminUsername" placeholder="New Admin Username" required>
       <input type="password" id="newAdminPassword" placeholder="New Admin Password" required>
+      <select id="newAdminDepartment" required>
+        <option value="">Select Department</option>
+        <option value="General Agriculture">General Agriculture</option>
+        <option value="Agribusiness">Agribusiness</option>
+        <option value="Forestry">Forestry</option>
+        <option value="Environmental Science">Environmental Science</option>
+        <option value="Civil Engineering">Civil Engineering</option>
+        <option value="Electrical Engineering">Electrical Engineering</option>
+        <option value="Mechanical Engineering">Mechanical Engineering</option>
+        <option value="Architecture">Architecture</option>
+        <option value="Nursing">Nursing</option>
+        <option value="Public Health">Public Health</option>
+        <option value="Midwifery">Midwifery</option>
+        <option value="Pharmacy">Pharmacy</option>
+        <option value="Primary Education">Primary Education</option>
+        <option value="Secondary Education">Secondary Education</option>
+        <option value="Special Education">Special Education</option>
+        <option value="English">English</option>
+        <option value="Social Sciences">Social Sciences</option>
+        <option value="Biological Sciences">Biological Sciences</option>
+        <option value="Chemistry">Chemistry</option>
+        <option value="Physics">Physics</option>
+        <option value="Mathematics">Mathematics</option>
+        <option value="Accounting">Accounting</option>
+        <option value="Management">Management</option>
+        <option value="Economics">Economics</option>
+        <option value="Public Administration">Public Administration</option>
+      </select>
       <button type="submit">Add Admin</button>
     </form>
   </div>
@@ -197,10 +232,14 @@
       });
 
       if (res.ok) {
+        const data = await res.json();
         document.getElementById("loginScreen").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");
+        window.adminDepartment = data.admin.department || "";
+        document.getElementById("adminDeptDisplay").textContent = window.adminDepartment ? `Department: ${window.adminDepartment}` : "";
         loadComplaints();
         loadUsers();
+          startNotificationPolling();
       } else {
         alert("Invalid admin credentials");
       }
@@ -210,9 +249,89 @@
       await fetch("/api/admin/logout", { method: "POST" });
       document.getElementById("dashboard").classList.add("hidden");
       document.getElementById("loginScreen").classList.remove("hidden");
+        stopNotificationPolling();
+    }
+    // ================= Notifications =================
+    let notificationInterval = null;
+    let lastChecked = null;
+
+    function startNotificationPolling() {
+      lastChecked = new Date().toISOString();
+      fetchNotifications();
+      notificationInterval = setInterval(fetchNotifications, 30000); // every 30s
+    }
+
+    function stopNotificationPolling() {
+      clearInterval(notificationInterval);
+      document.getElementById("notificationBadge").textContent = "";
+    }
+
+    async function fetchNotifications() {
+      if (!window.adminDepartment) return;
+      try {
+        const res = await fetch(`/api/department-tasks/notifications?lastChecked=${encodeURIComponent(lastChecked)}`);
+        if (res.ok) {
+          const newTasks = await res.json();
+          if (newTasks.length > 0) {
+            document.getElementById("notificationBadge").textContent = `🔔 ${newTasks.length} new task(s) for your department!`;
+          } else {
+            document.getElementById("notificationBadge").textContent = "";
+          }
+          lastChecked = new Date().toISOString();
+        }
+      } catch (err) {
+        document.getElementById("notificationBadge").textContent = "";
+      }
     }
 
     // ================= Complaints =================
+      // Export department complaints to CSV
+      function exportComplaints() {
+        const complaints = allComplaints.filter(c => !window.adminDepartment || c.department === window.adminDepartment);
+        if (complaints.length === 0) {
+          alert("No complaints to export.");
+          return;
+        }
+        const headers = ["Student","College","Department","Message","Status","Date"];
+        const rows = complaints.map(c => [
+          c.username,
+          c.college || "",
+          c.department || "",
+          c.message.replace(/\n/g, " ").replace(/,/g, ";"),
+          c.status,
+          c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
+        ]);
+        let csv = headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "department_tasks.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      // Print department complaints
+      function printComplaints() {
+        const complaints = allComplaints.filter(c => !window.adminDepartment || c.department === window.adminDepartment);
+        if (complaints.length === 0) {
+          alert("No complaints to print.");
+          return;
+        }
+        let html = `<h2>Department Tasks</h2><table border='1' style='width:100%;border-collapse:collapse;'><tr><th>Student</th><th>College</th><th>Department</th><th>Message</th><th>Status</th><th>Date</th></tr>`;
+        complaints.forEach(c => {
+          html += `<tr><td>${c.username}</td><td>${c.college || ""}</td><td>${c.department || ""}</td><td>${c.message.replace(/\n/g, " ").replace(/,/g, ";")}</td><td>${c.status}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}</td></tr>`;
+        });
+        html += "</table>";
+        const win = window.open("", "PrintWindow");
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        win.print();
+        win.close();
+      }
     async function loadComplaints() {
       try {
         const res = await fetch('/api/complaints');
@@ -237,16 +356,54 @@
     function renderComplaints(complaints) {
       const list = document.getElementById("complaintsList");
       list.innerHTML = "";
-      complaints.forEach(c => {
+  complaints.filter(c => !window.adminDepartment || c.department === window.adminDepartment).forEach(c => {
         const date = c.createdAt ? new Date(c.createdAt).toLocaleString() : "N/A";
         const row = document.createElement("tr");
+        let assignSection = "";
+        if (c.status === "Pending") {
+          assignSection = `
+            <form class="assignForm" data-id="${c._id}" style="display:inline-block;">
+              <select name="department" required>
+                <option value="">Assign Department</option>
+                <option value="General Agriculture">General Agriculture</option>
+                <option value="Agribusiness">Agribusiness</option>
+                <option value="Forestry">Forestry</option>
+                <option value="Environmental Science">Environmental Science</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Electrical Engineering">Electrical Engineering</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Architecture">Architecture</option>
+                <option value="Nursing">Nursing</option>
+                <option value="Public Health">Public Health</option>
+                <option value="Midwifery">Midwifery</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Primary Education">Primary Education</option>
+                <option value="Secondary Education">Secondary Education</option>
+                <option value="Special Education">Special Education</option>
+                <option value="English">English</option>
+                <option value="Social Sciences">Social Sciences</option>
+                <option value="Biological Sciences">Biological Sciences</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Physics">Physics</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="Accounting">Accounting</option>
+                <option value="Management">Management</option>
+                <option value="Economics">Economics</option>
+                <option value="Public Administration">Public Administration</option>
+              </select>
+              <button type="submit">Assign</button>
+            </form>
+          `;
+        }
         row.innerHTML = `
           <td>${c.username}</td>
           <td>${c.college || "N/A"}</td>
+          <td>${c.department || "N/A"}</td>
           <td>${c.message.substring(0, 30)}... <button onclick="alert('${c.message}')">Read More</button></td>
           <td>${c.status}</td>
           <td>${date}</td>
           <td>
+            ${assignSection}
             ${c.status === "Pending" 
               ? `<button onclick="markSolved('${c._id}')">Mark Solved</button>` 
               : ""}
@@ -255,11 +412,38 @@
         `;
         list.appendChild(row);
       });
+
+      // Add event listeners for assign forms
+      document.querySelectorAll('.assignForm').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = form.getAttribute('data-id');
+          const department = form.department.value;
+          try {
+            const res = await fetch(`/api/complaints/${id}/assign`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ department })
+            });
+            if (res.ok) {
+              alert('Task assigned to department!');
+              loadComplaints();
+            } else {
+              alert('Error assigning department');
+            }
+          } catch (err) {
+            alert('Unexpected error assigning department');
+          }
+        });
+      });
     }
 
     function filterComplaints(status) {
-      if (status === 'all') renderComplaints(allComplaints);
-      else renderComplaints(allComplaints.filter(c => c.status === status));
+      if (status === 'all') {
+        renderComplaints(allComplaints.filter(c => !window.adminDepartment || c.department === window.adminDepartment));
+      } else {
+        renderComplaints(allComplaints.filter(c => c.status === status && (!window.adminDepartment || c.department === window.adminDepartment)));
+      }
     }
 
     function searchComplaints() {
@@ -307,20 +491,27 @@
       e.preventDefault();
       const username = document.getElementById("newAdminUsername").value;
       const password = document.getElementById("newAdminPassword").value;
-
-      const res = await fetch("/api/admin/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (res.ok) {
-        alert("New admin added successfully!");
-        document.getElementById("addAdminForm").reset();
-      } else {
-        const data = await res.json();
-        alert("Error: " + data.error);
-      }
+        const department = document.getElementById("newAdminDepartment").value;
+        if (!department) {
+          alert("Please select a department for the new admin.");
+          return;
+        }
+        try {
+          const res = await fetch("/api/admin/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password, department })
+          });
+          if (res.ok) {
+            alert("New admin added successfully!");
+            document.getElementById("addAdminForm").reset();
+          } else {
+            const data = await res.json();
+            alert("Error: " + data.error);
+          }
+        } catch (err) {
+          alert("Unexpected error adding admin");
+        }
     });
   </script>
 </body>

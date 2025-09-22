@@ -100,6 +100,36 @@
         <option value="College of Management and Administration">College of Management and Administration</option>
       </select>
 
+      <label for="department">Select Your Department:</label>
+      <select id="department" required>
+        <option value="">-- Select Department --</option>
+        <option value="General Agriculture">General Agriculture</option>
+        <option value="Agribusiness">Agribusiness</option>
+        <option value="Forestry">Forestry</option>
+        <option value="Environmental Science">Environmental Science</option>
+        <option value="Civil Engineering">Civil Engineering</option>
+        <option value="Electrical Engineering">Electrical Engineering</option>
+        <option value="Mechanical Engineering">Mechanical Engineering</option>
+        <option value="Architecture">Architecture</option>
+        <option value="Nursing">Nursing</option>
+        <option value="Public Health">Public Health</option>
+        <option value="Midwifery">Midwifery</option>
+        <option value="Pharmacy">Pharmacy</option>
+        <option value="Primary Education">Primary Education</option>
+        <option value="Secondary Education">Secondary Education</option>
+        <option value="Special Education">Special Education</option>
+        <option value="English">English</option>
+        <option value="Social Sciences">Social Sciences</option>
+        <option value="Biological Sciences">Biological Sciences</option>
+        <option value="Chemistry">Chemistry</option>
+        <option value="Physics">Physics</option>
+        <option value="Mathematics">Mathematics</option>
+        <option value="Accounting">Accounting</option>
+        <option value="Management">Management</option>
+        <option value="Economics">Economics</option>
+        <option value="Public Administration">Public Administration</option>
+      </select>
+
       <label for="message">Complaint:</label>
       <textarea id="message" rows="4" placeholder="Write your complaint..." required></textarea>
 
@@ -115,109 +145,168 @@
     </div>
   </div>
 
-  <script>
-    // Retrieve student info from localStorage
-    const username = localStorage.getItem("username");
-    const studentId = username
+<script>
+  // Retrieve student info from localStorage
+  const username = localStorage.getItem("username");
+  const studentId = username;
 
-    if (!username || !studentId) {
-      window.location.href = "index.html";
-    } else {
-      document.getElementById("studentName").textContent = username;
-    
+  if (!username || !studentId) {
+    window.location.href = "index.html";
+  } else {
+    document.getElementById("studentName").textContent = username;
+  }
+
+  // Load all complaints/tasks for the user
+  let allUserComplaints = [];
+  let currentFilter = "all";
+async function loadComplaints() {
+  try {
+    const res = await fetch('/api/my-complaints', {
+      
+      credentials: "include" // ✅ critical for session
+    });
+    if (!res.ok) throw new Error("Failed to fetch complaints");
+
+    const complaints = await res.json();
+    allUserComplaints = complaints;
+    renderComplaints();
+  } catch (err) {
+    console.error("Error loading complaints:", err);
+  }
+}
+
+
+  function renderComplaints() {
+    const listDiv = document.getElementById("complaintsList");
+    listDiv.innerHTML = "";
+    let filtered = allUserComplaints;
+
+    if (currentFilter === "pending") {
+      filtered = filtered.filter(c => c.status === "Pending");
+    } else if (currentFilter === "solved") {
+      filtered = filtered.filter(c => c.status === "Solved");
     }
 
-
-    // Load all complaints/tasks for the user
-    let allUserComplaints = [];
-    let currentFilter = "all";
-
-    async function loadComplaints() {
-      try {
-        const res = await fetch('/api/complaints');
-        const complaints = await res.json();
-        allUserComplaints = complaints.filter(c => c.username === username);
-        renderComplaints();
-      } catch (err) {
-        console.error("Error loading complaints:", err);
-      }
+    if (filtered.length === 0) {
+      listDiv.innerHTML = "<p>No complaints or tasks found.</p>";
+      return;
     }
 
-    function renderComplaints() {
-      const listDiv = document.getElementById("complaintsList");
-      listDiv.innerHTML = "";
-      let filtered = allUserComplaints;
-      if (currentFilter === "pending") {
-        filtered = filtered.filter(c => c.status === "Pending");
-      } else if (currentFilter === "solved") {
-        filtered = filtered.filter(c => c.status === "Solved");
-      }
-      if (filtered.length === 0) {
-        listDiv.innerHTML = "<p>No complaints or tasks found.</p>";
-        return;
-      }
-      filtered.forEach((c, idx) => {
-        const item = document.createElement("div");
-        item.className = "complaint-card";
-        // Format timestamps
-        const sentTime = c.createdAt ? new Date(c.createdAt).toLocaleString() : "N/A";
-        const solvedTime = c.solvedAt ? new Date(c.solvedAt).toLocaleString() : (c.status === "Solved" ? "(time not recorded)" : "-");
-        item.innerHTML = `
-          <strong>Department:</strong> ${c.department || "N/A"}<br>
-          <strong>College:</strong> ${c.college || "N/A"}<br>
-          <strong>Message:</strong> ${c.message}<br>
-          <strong>Status:</strong> <span class="${c.status === "Pending" ? "status-pending" : "status-solved"}">${c.status}</span><br>
-          <strong>Sent:</strong> ${sentTime}<br>
-          <strong>Solved:</strong> ${c.status === "Solved" ? solvedTime : "-"}
-          ${c.status === "Pending" ? `<br><button class="solveBtn" data-id="${c._id}">Mark as Solved</button>` : ""}
+    filtered.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "complaint-card";
+
+      const sentTime = c.createdAt ? new Date(c.createdAt).toLocaleString() : "N/A";
+      const solvedTime = c.solvedAt ? new Date(c.solvedAt).toLocaleString() :
+        (c.status === "Solved" ? "(time not recorded)" : "-");
+
+      let ratingSection = "";
+      if (c.status === "Solved" && !c.rating) {
+        ratingSection = `
+          <form class="rateForm" data-id="${c._id}">
+            <label>Rate how your complaint was handled:</label>
+            <select name="rating" required>
+              <option value="">Select rating</option>
+              <option value="1">1 - Poor</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5 - Excellent</option>
+            </select>
+            <label>Recommend a way for modification:</label>
+            <textarea name="recommendation" rows="2" placeholder="Your suggestion..."></textarea>
+            <button type="submit">Submit Feedback</button>
+          </form>
         `;
-        listDiv.appendChild(item);
-      });
+      } else if (c.rating) {
+        ratingSection = `<strong>Your Rating:</strong> ${c.rating}<br><strong>Recommendation:</strong> ${c.recommendation || "None"}`;
+      }
 
-      // Add event listeners for solve buttons
-      document.querySelectorAll(".solveBtn").forEach(btn => {
-        btn.addEventListener("click", async (e) => {
-          const id = btn.getAttribute("data-id");
-          const res = await fetch(`/api/complaints/${id}/solve`, { method: "PUT" });
-          if (res.ok) {
-            alert("Marked as solved!");
-            loadComplaints();
-          } else {
-            alert("Error updating status");
-          }
-        });
-      });
-    }
-
-    document.querySelectorAll(".filterBtn").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        currentFilter = btn.getAttribute("data-filter");
-        renderComplaints();
-      });
+      item.innerHTML = `
+        <strong>Department:</strong> ${c.department || "N/A"}<br>
+        <strong>College:</strong> ${c.college || "N/A"}<br>
+        <strong>Message:</strong> ${c.message}<br>
+        <strong>Status:</strong> 
+        <span class="${c.status === "Pending" ? "status-pending" : "status-solved"}">${c.status}</span><br>
+        <strong>Sent:</strong> ${sentTime}<br>
+        <strong>Solved:</strong> ${c.status === "Solved" ? solvedTime : "-"}<br>
+        ${ratingSection}
+      `;
+      listDiv.appendChild(item);
     });
 
-    loadComplaints();
+    // Add event listeners for feedback forms
+    document.querySelectorAll('.rateForm').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = form.getAttribute('data-id');
+        const rating = form.rating.value;
+        const recommendation = form.recommendation.value;
+        try {
+          const res = await fetch(`/api/complaints/${id}/rate`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating, recommendation })
+          });
+          if (res.ok) {
+            alert('Feedback submitted!');
+            loadComplaints();
+          } else {
+            alert('Error submitting feedback');
+          }
+        } catch (err) {
+          alert('Unexpected error submitting feedback');
+        }
+      });
+    });
+  }
 
-    // Submit complaint
-    document.getElementById("complaintForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const college = document.getElementById("college").value;
-      const message = document.getElementById("message").value;
+  // Filter buttons
+  document.querySelectorAll(".filterBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentFilter = btn.getAttribute("data-filter");
+      renderComplaints();
+    });
+  });
 
+  loadComplaints();
+
+  // Submit complaint
+  document.getElementById("complaintForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const college = document.getElementById("college").value;
+    const department = document.getElementById("department").value;
+    const message = document.getElementById("message").value;
+
+    try {
       const res = await fetch('/api/complaints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ college, message, username })
+        body: JSON.stringify({ college, department, message, username })
       });
 
       if (res.ok) {
         alert("Complaint submitted successfully!");
         document.getElementById("message").value = "";
-        loadLastComplaint();
+        loadComplaints();
       } else {
-        alert("Error submitting complaint");
+        const data = await res.json();
+        alert("Error submitting complaint: " + (data.error || data.message));
       }
-    });
-  </script>
+    } catch (err) {
+      console.error("Error submitting complaint:", err);
+      alert("An unexpected error occurred.");
+    }
+  });
+
+  // Logout button
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    localStorage.clear();
+    window.location.href = "index.html";
+  });
+</script>
+
 </body>
 </html>
