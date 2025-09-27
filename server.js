@@ -227,19 +227,11 @@ app.get("/api/complaints", requireAdmin, async (req, res) => {
 });
 
 // Mark complaint as solved
-app.put("/api/complaints/:id/solve", requireAdmin, async (req, res) => {
+app.put("/api/complaints/:id/solve", async (req, res) => {
   try {
-    const adminUsername = req.session.admin.username;
-    const admin = await Admin.findOne({ username: adminUsername });
-    if (!admin || !admin.department) {
-      return res.status(403).json({ error: "Admin department not found" });
-    }
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) {
       return res.status(404).json({ error: "Complaint not found" });
-    }
-    if (complaint.department !== admin.department) {
-      return res.status(403).json({ error: "You can only solve complaints in your department" });
     }
     complaint.status = "Solved";
     await complaint.save();
@@ -250,19 +242,11 @@ app.put("/api/complaints/:id/solve", requireAdmin, async (req, res) => {
 });
 
 // Delete complaint
-app.delete("/api/complaints/:id", requireAdmin, async (req, res) => {
+app.delete("/api/complaints/:id", async (req, res) => {
   try {
-    const adminUsername = req.session.admin.username;
-    const admin = await Admin.findOne({ username: adminUsername });
-    if (!admin || !admin.department) {
-      return res.status(403).json({ error: "Admin department not found" });
-    }
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) {
       return res.status(404).json({ error: "Complaint not found" });
-    }
-    if (complaint.department !== admin.department) {
-      return res.status(403).json({ error: "You can only delete complaints in your department" });
     }
     await Complaint.findByIdAndDelete(req.params.id);
     res.json({ message: "Complaint deleted" });
